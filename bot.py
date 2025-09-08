@@ -94,7 +94,12 @@ async def process_gif(ctx_or_interaction, attachments):
     output_path = os.path.join(OUTPUT_FOLDER, f"{attachment.filename.split('.')[0]}.gif")
 
     await attachment.save(input_path)
-    await (ctx_or_interaction.response.send_message if isinstance(ctx_or_interaction, discord.Interaction) else ctx_or_interaction.send)("Converting to GIF...")
+
+    # Initial message
+    if isinstance(ctx_or_interaction, discord.Interaction):
+        await ctx_or_interaction.response.send_message("Converting to GIF...")
+    else:
+        await ctx_or_interaction.send("Converting to GIF...")
 
     try:
         if attachment.filename.lower().endswith((".mp4", ".mov", ".webm", ".mkv")):
@@ -102,12 +107,25 @@ async def process_gif(ctx_or_interaction, attachments):
         elif attachment.filename.lower().endswith((".png", ".jpg", ".jpeg", ".bmp", ".webp")):
             image_to_gif(input_path, output_path)
         else:
-            await (ctx_or_interaction.response.send_message if isinstance(ctx_or_interaction, discord.Interaction) else ctx_or_interaction.send)("Unsupported file type.")
+            msg = "Unsupported file type."
+            if isinstance(ctx_or_interaction, discord.Interaction):
+                await ctx_or_interaction.followup.send(msg)
+            else:
+                await ctx_or_interaction.send(msg)
             return
 
-        await (ctx_or_interaction.response.send_message if isinstance(ctx_or_interaction, discord.Interaction) else ctx_or_interaction.send)(file=File(output_path))
+        # Send the GIF
+        if isinstance(ctx_or_interaction, discord.Interaction):
+            await ctx_or_interaction.followup.send(file=File(output_path))
+        else:
+            await ctx_or_interaction.send(file=File(output_path))
+
     except Exception as e:
-        await (ctx_or_interaction.response.send_message if isinstance(ctx_or_interaction, discord.Interaction) else ctx_or_interaction.send)(f"Error: {e}")
+        msg = f"Error: {e}"
+        if isinstance(ctx_or_interaction, discord.Interaction):
+            await ctx_or_interaction.followup.send(msg)
+        else:
+            await ctx_or_interaction.send(msg)
 
 # ------------------ RUN BOT ------------------
 bot.run(TOKEN)

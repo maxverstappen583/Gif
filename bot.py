@@ -5,7 +5,7 @@ import discord
 from discord.ext import commands
 from flask import Flask
 from threading import Thread
-from moviepy.editor import VideoFileClip, ImageSequenceClip
+from moviepy.editor import VideoFileClip
 from PIL import Image
 
 # ------------------ LOAD ENV ------------------
@@ -50,27 +50,36 @@ def video_to_gif(video_path, output_path):
     clip.write_gif(output_path, fps=10)
     clip.close()
 
-# ------------------ BOT COMMANDS ------------------
+# ------------------ BOT EVENTS ------------------
 @bot.event
 async def on_ready():
     print(f"{bot.user} is online!")
     keep_alive()
+    try:
+        synced = await bot.tree.sync()
+        print(f"Synced {len(synced)} slash commands.")
+    except Exception as e:
+        print(f"Slash command sync failed: {e}")
 
-# --------- PREFIX COMMAND ---------
+# ------------------ PREFIX COMMAND ------------------
 @bot.command(name="to_gif")
 async def to_gif_prefix(ctx):
     await process_gif(ctx, ctx.message.attachments)
 
-# --------- SLASH COMMAND ---------
-@bot.tree.command(name="to_gif", description="Convert image/video to GIF")
+# ------------------ SLASH COMMAND ------------------
+@bot.tree.command(name="to_gif", description="Convert an image or video to GIF")
 async def to_gif_slash(interaction: discord.Interaction):
-    attachments = interaction.message.attachments if interaction.message else []
-    await process_gif(interaction, attachments)
+    # Slash commands don’t automatically get attachments, we handle it below
+    if not interaction.data.get("attachments"):
+        await interaction.response.send_message("Please attach an image or video to convert.")
+        return
+    attachments = interaction.data["attachments"]
+    await process_gif(interaction, [discord.Attachment._from_data(att, bot) for att in attachments])
 
-# --------- PROCESSING FUNCTION ---------
+# ------------------ PROCESS FUNCTION ------------------
 async def process_gif(ctx_or_interaction, attachments):
     if not attachments:
-        await ctx_or_interaction.response.send_message("Please attach an image or video." if isinstance(ctx_or_interaction, discord.Interaction) else "Please attach an image or video.")
+        await (ctx_or_interaction.response.send_message if isinstance(ctx_or_interaction, discord.Interaction) else ctx_or_interaction.send)("Please attach an image or video.")
         return
 
     attachment = attachments[0]
@@ -78,7 +87,6 @@ async def process_gif(ctx_or_interaction, attachments):
     output_path = os.path.join(OUTPUT_FOLDER, f"{attachment.filename.split('.')[0]}.gif")
 
     await attachment.save(input_path)
-
     await (ctx_or_interaction.response.send_message if isinstance(ctx_or_interaction, discord.Interaction) else ctx_or_interaction.send)("Converting to GIF...")
 
     try:
@@ -91,7 +99,6 @@ async def process_gif(ctx_or_interaction, attachments):
             return
 
         await (ctx_or_interaction.response.send_message if isinstance(ctx_or_interaction, discord.Interaction) else ctx_or_interaction.send)(file=discord.File(output_path))
-
     except Exception as e:
         await (ctx_or_interaction.response.send_message if isinstance(ctx_or_interaction, discord.Interaction) else ctx_or_interaction.send)(f"Error: {e}")
 

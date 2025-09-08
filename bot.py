@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 import discord
 from discord.ext import commands
-from discord.commands import Option  # Correct import for Option
+from discord.commands import Option  # Works in discord.py 2.6.3
 from discord import Attachment
 from flask import Flask
 from threading import Thread
@@ -48,21 +48,19 @@ def image_to_gif(image_path, output_path, duration=500):
     img.save(output_path, save_all=True, append_images=[img], duration=duration, loop=0)
 
 def video_to_gif(video_path, output_path, fps=10, resize_width=320):
-    """Convert video to GIF using imageio + Pillow"""
     reader = imageio.get_reader(video_path)
     frames = []
     for frame in reader:
         img = Image.fromarray(frame)
-        # Resize to width while keeping aspect ratio
-        w_percent = (resize_width / float(img.width))
-        h_size = int((float(img.height) * float(w_percent)))
+        w_percent = resize_width / float(img.width)
+        h_size = int(float(img.height) * w_percent)
         img = img.resize((resize_width, h_size), Image.Resampling.LANCZOS)
         frames.append(img)
     reader.close()
     if frames:
         frames[0].save(output_path, save_all=True, append_images=frames[1:], duration=int(1000/fps), loop=0)
 
-# ------------------ BOT EVENTS ------------------
+# ------------------ EVENTS ------------------
 @bot.event
 async def on_ready():
     print(f"{bot.user} is online!")

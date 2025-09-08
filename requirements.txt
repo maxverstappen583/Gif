@@ -1,4 +1,4 @@
-discord.py==2.6.3
+git+https://github.com/Rapptz/discord.py
 Flask
 python-dotenv
 imageio

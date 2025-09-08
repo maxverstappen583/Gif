@@ -7,7 +7,6 @@ from flask import Flask
 from threading import Thread
 from PIL import Image
 import imageio
-import tempfile
 
 # ------------------ LOAD ENV ------------------
 load_dotenv()
@@ -34,7 +33,7 @@ def home():
     return "Bot is running!"
 
 def run():
-    port = int(os.environ.get("PORT", 8080))
+    port = int(os.environ.get("PORT", 8080))  # Render expects $PORT
     app.run(host="0.0.0.0", port=port)
 
 def keep_alive():
@@ -42,7 +41,6 @@ def keep_alive():
     t.start()
 
 # ------------------ HELPERS ------------------
-
 def image_to_gif(image_path, output_path, duration=500):
     img = Image.open(image_path)
     img.save(output_path, save_all=True, append_images=[img], duration=duration, loop=0)
@@ -76,24 +74,23 @@ async def on_ready():
 # ------------------ PREFIX COMMAND ------------------
 @bot.command(name="to_gif")
 async def to_gif_prefix(ctx):
+    if not ctx.message.attachments:
+        await ctx.send("Please attach an image or video.")
+        return
     await process_gif(ctx, ctx.message.attachments)
 
 # ------------------ SLASH COMMAND ------------------
+from discord import Option, Attachment
+
 @bot.tree.command(name="to_gif", description="Convert an image or video to GIF")
-async def to_gif_slash(interaction: discord.Interaction):
-    attachments = interaction.data.get("attachments", [])
-    if not attachments:
-        await interaction.response.send_message("Please attach an image or video to convert.")
+async def to_gif_slash(interaction: discord.Interaction, file: Option(Attachment, "Upload an image or video")):
+    if not file:
+        await interaction.response.send_message("You must provide a file to convert.")
         return
-    discord_attachments = [discord.Attachment._from_data(att, bot) for att in attachments]
-    await process_gif(interaction, discord_attachments)
+    await process_gif(interaction, [file])
 
 # ------------------ PROCESS FUNCTION ------------------
 async def process_gif(ctx_or_interaction, attachments):
-    if not attachments:
-        await (ctx_or_interaction.response.send_message if isinstance(ctx_or_interaction, discord.Interaction) else ctx_or_interaction.send)("Please attach an image or video.")
-        return
-
     attachment = attachments[0]
     input_path = os.path.join(UPLOAD_FOLDER, attachment.filename)
     output_path = os.path.join(OUTPUT_FOLDER, f"{attachment.filename.split('.')[0]}.gif")

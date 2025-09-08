@@ -33,7 +33,8 @@ def home():
     return "Bot is running!"
 
 def run():
-    app.run(host="0.0.0.0", port=8080)
+    port = int(os.environ.get("PORT", 8080))  # Use Render's PORT env variable
+    app.run(host="0.0.0.0", port=port)
 
 def keep_alive():
     t = Thread(target=run)
@@ -69,12 +70,13 @@ async def to_gif_prefix(ctx):
 # ------------------ SLASH COMMAND ------------------
 @bot.tree.command(name="to_gif", description="Convert an image or video to GIF")
 async def to_gif_slash(interaction: discord.Interaction):
-    # Slash commands don’t automatically get attachments, we handle it below
-    if not interaction.data.get("attachments"):
+    attachments = interaction.data.get("attachments", [])
+    if not attachments:
         await interaction.response.send_message("Please attach an image or video to convert.")
         return
-    attachments = interaction.data["attachments"]
-    await process_gif(interaction, [discord.Attachment._from_data(att, bot) for att in attachments])
+    # Convert attachments to discord.Attachment objects
+    discord_attachments = [discord.Attachment._from_data(att, bot) for att in attachments]
+    await process_gif(interaction, discord_attachments)
 
 # ------------------ PROCESS FUNCTION ------------------
 async def process_gif(ctx_or_interaction, attachments):

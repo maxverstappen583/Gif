@@ -3,8 +3,7 @@ import os
 from dotenv import load_dotenv
 import discord
 from discord.ext import commands
-from discord.commands import Option  # Works in discord.py 2.6.3
-from discord import Attachment
+from discord import Attachment, File, app_commands
 from flask import Flask
 from threading import Thread
 from PIL import Image
@@ -66,8 +65,8 @@ async def on_ready():
     print(f"{bot.user} is online!")
     keep_alive()
     try:
-        synced = await bot.tree.sync()
-        print(f"Synced {len(synced)} slash commands.")
+        await bot.tree.sync()
+        print("Slash commands synced.")
     except Exception as e:
         print(f"Slash command sync failed: {e}")
 
@@ -81,7 +80,8 @@ async def to_gif_prefix(ctx):
 
 # ------------------ SLASH COMMAND ------------------
 @bot.tree.command(name="to_gif", description="Convert an image or video to GIF")
-async def to_gif_slash(interaction: discord.Interaction, file: Option(Attachment, "Upload an image or video")):
+@app_commands.describe(file="Upload an image or video")
+async def to_gif_slash(interaction: discord.Interaction, file: Attachment):
     if not file:
         await interaction.response.send_message("You must provide a file to convert.")
         return
@@ -105,7 +105,7 @@ async def process_gif(ctx_or_interaction, attachments):
             await (ctx_or_interaction.response.send_message if isinstance(ctx_or_interaction, discord.Interaction) else ctx_or_interaction.send)("Unsupported file type.")
             return
 
-        await (ctx_or_interaction.response.send_message if isinstance(ctx_or_interaction, discord.Interaction) else ctx_or_interaction.send)(file=discord.File(output_path))
+        await (ctx_or_interaction.response.send_message if isinstance(ctx_or_interaction, discord.Interaction) else ctx_or_interaction.send)(file=File(output_path))
     except Exception as e:
         await (ctx_or_interaction.response.send_message if isinstance(ctx_or_interaction, discord.Interaction) else ctx_or_interaction.send)(f"Error: {e}")
 

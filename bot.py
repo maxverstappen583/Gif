@@ -3,6 +3,8 @@ import os
 from dotenv import load_dotenv
 import discord
 from discord.ext import commands
+from discord.commands import Option  # Correct import for Option
+from discord import Attachment
 from flask import Flask
 from threading import Thread
 from PIL import Image
@@ -33,7 +35,7 @@ def home():
     return "Bot is running!"
 
 def run():
-    port = int(os.environ.get("PORT", 8080))  # Render expects $PORT
+    port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
 
 def keep_alive():
@@ -80,8 +82,6 @@ async def to_gif_prefix(ctx):
     await process_gif(ctx, ctx.message.attachments)
 
 # ------------------ SLASH COMMAND ------------------
-from discord import Option, Attachment
-
 @bot.tree.command(name="to_gif", description="Convert an image or video to GIF")
 async def to_gif_slash(interaction: discord.Interaction, file: Option(Attachment, "Upload an image or video")):
     if not file:
